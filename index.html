@@ -2,17 +2,14 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#0e1730" />
 <title>WordRush — учи слова в космосе</title>
 <style>
-  #startBtn{margin-top:auto}
-  @media (max-width:640px), (max-height:760px){ #startBtn{margin-top:6px} }
   :root{--bg:#0e1730;--panel:#16213f;--panel2:#1b2a52;--line:#2c3c6b;--txt:#eaf0ff;
     --muted:#8ea0cc;--green:#7ed321;--green-d:#5fa815;--red:#ff4d4d;--shadow:0 18px 40px rgba(0,0,0,.45)}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{margin:0;height:100%;-webkit-text-size-adjust:100%}
+  html,body{margin:0;height:100%;-webkit-text-size-adjust:100%}
   body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--txt);
     background:radial-gradient(1200px 700px at 70% -10%,#1d2c57 0%,transparent 60%),
       radial-gradient(900px 600px at 10% 110%,#14224a 0%,transparent 55%),var(--bg);
@@ -63,12 +60,16 @@
   tr.me td{color:var(--green);font-weight:800}
   .center{margin:auto;text-align:center}
   .big{font-size:46px;font-weight:900;line-height:1}
+  #startBtn{margin-top:auto}
+  #langs .card{padding:10px 8px}
+  #langs .mini{margin-top:2px}
   #err{position:fixed;left:8px;right:8px;bottom:8px;background:#5a1f1f;border:1px solid var(--red);
     color:#ffd6d6;padding:10px;border-radius:10px;font:12px/1.4 monospace;display:none;z-index:99;white-space:pre-wrap}
-	  /* ---------- мобильная раскладка: весь экран, без внешнего обрезания ---------- */
+
+  /* ---------- мобильная раскладка: весь экран, без внешнего обрезания ---------- */
   @media (max-width:640px), (max-height:760px){
     body{padding:0;align-items:stretch;justify-content:stretch}
-    .app{width:100%;height:100vh;height:100dvh;border-radius:0}      /* dvh с vh-фолбэком */
+    .app{width:100%;height:100vh;height:100dvh;border-radius:0}
     .screen{border-radius:0;border-left:0;border-right:0;gap:9px;padding:12px;
       padding-top:calc(12px + env(safe-area-inset-top));
       padding-bottom:calc(12px + env(safe-area-inset-bottom))}
@@ -80,17 +81,15 @@
     .grid{gap:7px}
     #sets{grid-template-columns:repeat(2,1fr)!important}
     .btn{padding:13px;font-size:15px}
-    #startBtn{margin-top:6px}                                          /* ФУКС дыры: no auto на мобиле */
+    #startBtn{margin-top:6px}
     #photoBtn{font-size:13px!important;padding:11px!important}
     .ava-prev{width:54px;height:54px}
-    input[type=text]{padding:11px;font-size:16px}                      /* 16px = нет зума при фокусе на iOS */
+    input[type=text]{padding:11px;font-size:16px}
     .opt{padding:12px 6px;font-size:15px}
     .prompt{padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
     .hud{top:calc(10px + env(safe-area-inset-top))}
     #err{bottom:calc(8px + env(safe-area-inset-bottom))}
   }
-  #langs .card{padding:10px 8px}
-  #langs .mini{margin-top:2px}
 </style>
 </head>
 <body>
@@ -107,13 +106,13 @@
       <button class="btn btn-ghost mini" id="rmAva" style="display:none;padding:10px">✕</button>
     </div>
     <h2>Имя игрока</h2>
-    <input type="text" id="pname" maxlength="14" placeholder="Igor" value="">
-        <h2>Язык слов</h2>
+    <input type="text" id="pname" maxlength="14" placeholder="Igor" value="Igor">
+    <h2>Язык слов</h2>
     <div class="grid" id="langs" style="grid-template-columns:repeat(2,1fr)">
       <div class="card sel" data-lang="en"><div class="nm" style="font-size:14px">English</div><div class="mini">учим английский</div></div>
       <div class="card" data-lang="ru"><div class="nm" style="font-size:14px">Русский</div><div class="mini">учим русский</div></div>
     </div>
-	<h2>Набор слов</h2>
+    <h2>Набор слов</h2>
     <div class="grid" id="sets" style="grid-template-columns:repeat(2,1fr)"></div>
     <div class="mini" id="setInfo"></div>
     <button class="btn btn-green" id="startBtn">ДАЛЕЕ ▸</button>
@@ -137,7 +136,7 @@
   </section>
 
   <section id="scr-board" class="screen">
-    <h1>🏆 Лидерборд</h1><div class="mini"></div>
+    <h1>🏆 Лидерборд</h1><div class="mini" id="boardSub">Локальный рейтинг устройства (v2 — общий онлайн).</div>
     <table><thead><tr><th>#</th><th>Игрок</th><th style="text-align:right">Очки</th></tr></thead><tbody id="boardBody"></tbody></table>
     <div class="row" style="margin-top:auto"><button class="btn btn-ghost" id="clearBoard" style="flex:1">Сбросить</button><button class="btn btn-green" id="boardBack" style="flex:1">НАЗАД</button></div>
   </section>
@@ -167,7 +166,7 @@
 (function(){
 try{
 
-  /* ---- слово -> картинка (потом меняется на URL AI-спрайтов) ---- */
+  /* ---- слово(EN) -> картинка (эмодзи; позже меняется на URL AI-спрайтов) ---- */
   var V={
     cat:"🐱",dog:"🐶",horse:"🐴",cow:"🐮",pig:"🐷",mouse:"🐭",rabbit:"🐰",fox:"🦊",bear:"🐻",lion:"🦁",
     tiger:"🐯",elephant:"🐘",giraffe:"🦒",monkey:"🐵",zebra:"🦓",sheep:"🐑",chicken:"🐔",duck:"🦆",bird:"🐦",fish:"🐟",
@@ -193,8 +192,8 @@ try{
     sloth:"🦥",hedgehog:"🦔",camel:"🐫",llama:"🦙"
   };
   var ALL=Object.keys(V);
-    /* Русские соответствия тем же эмодзи. Ключи = EN из V. Эмодзи НЕ дублируются,
-     поэтому блок устойчив к любой кодировке/копипасте. */
+
+  /* ---- русские соответствия тем же образам (только кириллица/латиница, без эмодзи) ---- */
   var RU={
     cat:"кот",dog:"собака",horse:"лошадь",cow:"корова",pig:"свинья",mouse:"мышь",rabbit:"кролик",fox:"лиса",bear:"медведь",lion:"лев",
     tiger:"тигр",elephant:"слон",giraffe:"жираф",monkey:"обезьяна",zebra:"зебра",sheep:"овца",chicken:"курица",duck:"утка",bird:"птица",fish:"рыба",
@@ -225,17 +224,18 @@ try{
     return {en:en, ru:(ru||en), visual:V[en], translated:!!ru};
   });
 
-  /* Наборы: ключи собираем присваиваниями в пустой объект.
-     Длина пула встроена прямо в ключ ("..." + ALL.length), чтобы не держать
-     отдельную переменную, имя которой можно опечатать в другом месте. */
+  /* Наборы: ключи собираем присваиваниями (никаких конкатенаций внутри литерала {}). */
   var SETS={};
   SETS["Лёгкие · 20"]        = ALL.slice(0,20);
   SETS["Средние · 50"]       = ALL.slice(0,50);
   SETS["Большие · 100"]      = ALL.slice(0,100);
   SETS["Все · "+ALL.length]  = ALL.slice();
 
-  var FACES=["🐼","🐵","🦉"];
-  var FNAMES=["Панда","Обезьяна","Сова"];
+  /* Лица через ASCII-escape: невозможны к повреждению кодировкой/копипастой. */
+  var DEFAULT_FACE="\uD83D\uDE42";
+  var FACES_RAW=["\uD83D\uDC3C","\uD83D\uDC38","\uD83D\uDC35","\uD83D\uDC2F","\uD83E\uDD89"];
+  var FACES=FACES_RAW.map(function(x){return (x&&x.length)?x:DEFAULT_FACE;});
+  var FNAMES=["Панда","Лягушка","Обезьяна","Тигр","Сова"];
 
   /* ---- helpers ---- */
   function $(s){return document.querySelector(s);}
@@ -245,18 +245,9 @@ try{
   function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
   function shuffle(a){for(var i=a.length-1;i>0;i--){var j=(Math.random()*(i+1))|0;var t=a[i];a[i]=a[j];a[j]=t;}return a;}
   function show(id){document.querySelectorAll(".screen").forEach(function(e){e.classList.remove("active");});$("#"+id).classList.add("active");}
-    /* цвет набора по его лейблу (устойчив к "· N" и к ё/е) */
-  function colorForSet(label){
-    var s = String(label || "");
-    if (s.indexOf("Лёгк") >= 0 || s.indexOf("Легк")  >= 0) return "#7ed321"; // лёгкие  -> зелёный
-    if (s.indexOf("Средн") >= 0)                            return "#4da3ff"; // средние  -> синий
-    if (s.indexOf("Больш") >= 0 || s.indexOf("Больш") >= 0) return "#ffa62b"; // большие  -> оранжевый
-    if (s.indexOf("Все")   >= 0 || s.indexOf("Всe")   >= 0) return "#ff5d5d"; // все      -> красный
-    return ""; // неизвестно -> наследуем --txt (белый)
-  }
 
-  /* ---- voice ---- */
-    var VOICES={en:null,ru:null};
+  /* ---- voice (по языку) ---- */
+  var VOICES={en:null,ru:null};
   function initVoice(){
     if(!("speechSynthesis" in window))return;
     var set=function(){try{
@@ -279,26 +270,7 @@ try{
     }catch(e){}
   }
 
-    /* ================= LEADERBOARD: Supabase (общий) + localStorage (фолбэк) ================= */
-
-  var SUPABASE_URL      = "https://REPLACE_ME.supabase.co";   // <<< ваш Project URL
-  var SUPABASE_ANON_KEY = "REPLACE_ME_ANON_KEY";              // <<< ваш anon public
-  var LB_TABLE          = "scores";
-  var LB                = "wordrush_board_v1";
-  var SUBMIT_GAP_MS     = 4000;
-
-  var sb = null;
-  try {
-    var configured = SUPABASE_URL && SUPABASE_ANON_KEY &&
-                     SUPABASE_URL.indexOf("REPLACE_ME") === -1 &&
-                     SUPABASE_ANON_KEY.indexOf("REPLACE_ME") === -1;
-    if (configured && window.supabase && typeof window.supabase.createClient === "function") {
-      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: { persistSession: false, autoRefreshToken: false }
-      });
-    }
-  } catch (e) { sb = null; }
-
+  /* ---- leaderboard, раздельный по языку ---- */
   function lbKey(lang){return "wordrush_board_v2_"+(lang==="ru"?"ru":"en");}
   function loadBoard(lang){try{return JSON.parse(localStorage.getItem(lbKey(lang)))||[];}catch(e){return[];}}
   function saveScore(name,score,lang){
@@ -310,6 +282,7 @@ try{
   }
   function renderBoard(meName,meScore,lang){
     var b=loadBoard(lang),tb=$("#boardBody");
+    $("#boardSub").textContent=(lang==="ru"?"Русский":"English")+" · локальный рейтинг устройства";
     if(!b.length){tb.innerHTML='<tr><td colspan="3" class="mini" style="text-align:center;padding:22px">Пока пусто — будь первым</td></tr>';return;}
     tb.innerHTML=b.slice(0,10).map(function(r,i){
       var me=(r.name===meName&&r.score===meScore);
@@ -317,55 +290,8 @@ try{
     }).join("");
   }
 
-  function boardRow(i, r, meName, meScore){
-    var me  = (r.name === meName && r.score === meScore);
-    var col = colorForSet(r.set_key);                 // цвет имени по набору забега
-    var st  = col ? (' style="color:' + col + '"') : '';
-    return '<tr class="' + (me ? "me" : "") + '">' +
-             '<td>' + (i + 1) + '</td>' +
-             '<td' + st + '>' + esc(r.name) + '</td>' +
-             '<td style="text-align:right">' + fmt(r.score) + '</td>' +
-           '</tr>';
-  }
-  function boardEmpty(text){
-    return '<tr><td colspan="3" class="mini" style="text-align:center;padding:22px">' + text + '</td></tr>';
-  }
-  function renderLocal(tb, meName, meScore){
-    var b = loadBoard();
-    tb.innerHTML = b.length
-      ? b.slice(0, 10).map(function (r, i) { return boardRow(i, r, meName, meScore); }).join("")
-      : boardEmpty("Пока пусто — будь первым 🚀");
-  }
-
-  function renderBoard(meName, meScore){
-    var tb = $("#boardBody");
-    if (!tb) return;
-    tb.innerHTML = boardEmpty("Загрузка общего рейтинга…");
-    if (!sb) { renderLocal(tb, meName, meScore); return; }
-
-    sb.from(LB_TABLE)
-      .select("name,score,set_key")                  // <-- дотягиваем set_key
-      .order("score", { ascending: false })
-      .limit(20)
-      .then(function (res) {
-        if (res.error) throw res.error;
-        var rows = res.data || [];
-        if (!rows.length) { tb.innerHTML = boardEmpty("Общий рейтинг пуст — сыграй первым 🚀"); return; }
-        tb.innerHTML = rows.map(function (r, i) { return boardRow(i, r, meName, meScore); }).join("");
-      })
-      .catch(function (e) {
-        console.warn("[lb select]", e);
-        var b = loadBoard();
-        tb.innerHTML = (b.length
-            ? b.slice(0, 10).map(function (r, i) { return boardRow(i, r, meName, meScore); }).join("")
-            : boardEmpty("Пока пусто — будь первым 🚀")) +
-          '<tr><td colspan="3" class="mini" style="text-align:center;padding:8px;color:var(--muted)">нет связи с сервером — показан локальный рейтинг</td></tr>';
-      });
-  }
-  /* ================= /LEADERBOARD ================= */
-
   /* ---- state ---- */
-    var S={lang:"en",items:[],pool:[],idx:0,score:0,running:false,locked:false,obstacle:null,
+  var S={lang:"en",items:[],pool:[],idx:0,score:0,running:false,locked:false,obstacle:null,
     dodges:[],crashes:[],stars:[],shake:0,flash:0,tLast:0,raf:0,runId:0,
     face:FACES[0],avatar:null,name:"Igor",chosenSet:Object.keys(SETS)[0]};
 
@@ -383,25 +309,15 @@ try{
       cw.appendChild(d);
     });
   }
-    function setInfo(){
-    var col = colorForSet(S.chosenSet);
-    var lbl = col ? ('<span style="color:' + col + '">' + esc(S.chosenSet) + '</span>')
-                  : esc(S.chosenSet);
-    $("#setInfo").innerHTML = "Выбрано: " + lbl + " · скорость растёт с каждым верным ответом.";
-  }
+  function setInfo(){$("#setInfo").textContent="Выбрано: "+S.chosenSet+" · скорость растёт с каждым верным ответом.";}
   function buildSets(){
-    var sw = $("#sets"); sw.innerHTML = "";
-    Object.keys(SETS).forEach(function(k, i){
-      var col = colorForSet(k);
-      var d = document.createElement("div");
-      d.className = "card" + (i === 0 ? " sel" : "");
-      d.style.padding = "12px 8px";
-      d.innerHTML =
-        '<div class="nm" style="font-size:14px' + (col ? ';color:' + col : '') + '">' + esc(k) + '</div>' +
-        '<div class="mini">' + SETS[k].length + ' слов</div>';
-      d.addEventListener("click", function(){
-        document.querySelectorAll("#sets .card").forEach(function(c){ c.classList.remove("sel"); });
-        d.classList.add("sel"); S.chosenSet = k; setInfo();
+    var sw=$("#sets");sw.innerHTML="";
+    Object.keys(SETS).forEach(function(k,i){
+      var d=document.createElement("div");d.className="card"+(i===0?" sel":"");d.style.padding="12px 8px";
+      d.innerHTML='<div class="nm" style="font-size:14px">'+esc(k)+'</div><div class="mini">'+SETS[k].length+' слов</div>';
+      d.addEventListener("click",function(){
+        document.querySelectorAll("#sets .card").forEach(function(c){c.classList.remove("sel");});
+        d.classList.add("sel");S.chosenSet=k;setInfo();
       });
       sw.appendChild(d);
     });
@@ -447,9 +363,11 @@ try{
   window.addEventListener("resize",function(){if($("#scr-game").classList.contains("active"))resize();});
 
   function geom(){var py=H*.6;return{cx:W/2,cy:py,r:Math.min(W,H)*.15};}
-  function curSpeed(){return Math.min(100+S.score*8,520);}
+  /* Баланс скорости: base = px/сек на старте, per = прибавка за очко, cap = потолок. */
+  var SPD={base:100, per:4, cap:300};
+  function curSpeed(){return Math.min(SPD.base + S.score*SPD.per, SPD.cap);}
 
-    function nextRound(){
+  function nextRound(){
     if(S.idx>=S.pool.length){S.pool=shuffle(S.items.slice());S.idx=0;}
     var it=S.pool[S.idx++];
     var others=shuffle(S.items.filter(function(x){return x.en!==it.en;})).slice(0,2);
@@ -532,16 +450,16 @@ try{
         if(ob.y+ob.h/2>=pg.cy-pg.r)timeoutCrash();
       }else if(ob.state==="dodge"){
         ob.x+=ob.dir*900*dt;ob.a-=dt*2.6;ob.rot+=dt*6*ob.dir;
-        if(ob.a<=0){S.dodges.push({word:ob.word,visual:ob.visual,x:ob.x,y:ob.y,w:ob.w,h:ob.h,a:ob.a,rot:ob.rot,dir:ob.dir});S.obstacle=null;}
+        if(ob.a<=0){S.dodges.push({en:ob.en,label:ob.label,visual:ob.visual,x:ob.x,y:ob.y,w:ob.w,h:ob.h,a:ob.a,rot:ob.rot,dir:ob.dir});S.obstacle=null;}
       }else if(ob.state==="crash"){
         ob.y+=240*dt;ob.a-=dt*1.2;
-        if(ob.a<=0){S.crashes.push({word:ob.word,visual:ob.visual,x:ob.x,y:ob.y,w:ob.w,h:ob.h,a:ob.a,rot:ob.rot,dir:ob.dir});S.obstacle=null;}
+        if(ob.a<=0){S.crashes.push({en:ob.en,label:ob.label,visual:ob.visual,x:ob.x,y:ob.y,w:ob.w,h:ob.h,a:ob.a,rot:ob.rot,dir:ob.dir});S.obstacle=null;}
       }
     }
     S.dodges.forEach(function(d){d.x+=d.dir*900*dt;d.a-=dt*2.6;d.rot+=dt*6*d.dir;});S.dodges=S.dodges.filter(function(d){return d.a>0;});
     S.crashes.forEach(function(c){c.y+=240*dt;c.a-=dt*1.2;});S.crashes=S.crashes.filter(function(c){return c.a>0;});
     S.shake=Math.max(0,S.shake-dt*3);S.flash=Math.max(0,S.flash-dt*2.2);
-    $("#spd").textContent="×"+(sp/100).toFixed(1);
+    $("#spd").textContent="×"+(sp/SPD.base).toFixed(1);
   }
   function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
   function drawOb(o,al,rot){
@@ -566,7 +484,7 @@ try{
     ctx.fillStyle="rgba(20,30,60,.85)";ctx.beginPath();ctx.arc(0,-R*.45,R*.55,0,Math.PI*2);ctx.fill();
     ctx.save();ctx.beginPath();ctx.arc(0,-R*.45,R*.5,0,Math.PI*2);ctx.clip();
     if(S.avatar){var s=R*1.0;ctx.drawImage(S.avatar,-s/2,-R*.45-s/2,s,s);}
-    else{ctx.font=(R*.7)+"px serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(S.face,0,-R*.42);}
+    else{ctx.font=(R*.7)+"px serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(S.face||DEFAULT_FACE,0,-R*.42);}
     ctx.restore();
     ctx.fillStyle="rgba(255,255,255,.18)";ctx.beginPath();ctx.ellipse(-R*.22,-R*.62,R*.16,R*.28,-.6,0,Math.PI*2);ctx.fill();
     ctx.restore();
@@ -583,8 +501,8 @@ try{
     if(S.flash>0){ctx.fillStyle="rgba(255,60,60,"+(S.flash*.4)+")";ctx.fillRect(0,0,W,H);}
   }
 
-  /* ---- nav ---- */
-    function bindLang(){
+  /* ---- lang switch + nav ---- */
+  function bindLang(){
     document.querySelectorAll("#langs .card").forEach(function(c){
       c.addEventListener("click",function(){
         document.querySelectorAll("#langs .card").forEach(function(x){x.classList.remove("sel");});
